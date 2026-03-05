@@ -1,0 +1,188 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ============ CUSTOM REQUESTS ============
+model CustomRequest {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String
+  phone        String
+  requiredDate String
+  budget       String
+  description  String
+  image        String?
+
+  fullLength   String?
+  shoulder     String?
+  bust         String?
+  waist        String?
+  hips         String?
+  sleeveLength String?
+  armhole      String?
+
+  status       String   @default("Pending")
+  createdAt    DateTime @default(now())
+}
+
+// ============ USER & AUTHENTICATION ============
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  reviews       Review[]
+  createdAt     DateTime  @default(now())
+  wishlist      WishlistItem[]
+  cartItems     CartItem[]
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ============ PRODUCTS ============
+model Product {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  description       String?
+  price             Float
+  discountPrice     Float?
+  category          String
+  images            String[]
+  stock             Int         @default(0)
+  status            String      @default("Active")
+  allowCustomDesign Boolean     @default(false)
+  sizes             String[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  orderItems        OrderItem[]
+  reviews           Review[]
+  wishlistItems     WishlistItem[]
+  cartItems         CartItem[]
+}
+
+// ============ ORDERS ============
+model Order {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String?     @db.ObjectId
+  customerName  String
+  email         String
+  phone         String
+  address       String
+  totalAmount   Float
+  status        OrderStatus @default(PENDING)
+  paymentStatus String      @default("UNPAID")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User?       @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId      String   @db.ObjectId
+  productId    String   @db.ObjectId
+  quantity     Int
+  price        Float
+  productName  String   @default("")
+  productImage String?
+  sizeType     SizeType @default(STANDARD)
+  selectedSize String?
+  bust         Float?
+  waist        Float?
+  hip          Float?
+  dressLength  Float?
+  specialNotes String?
+  order        Order    @relation(fields: [orderId], references: [id])
+  product      Product  @relation(fields: [productId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum SizeType {
+  STANDARD
+  CUSTOM
+}
+
+// ============ WISHLIST ============
+model WishlistItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  productId String   @db.ObjectId
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@unique([userId, productId])
+}
+
+// ============ CART ============
+model CartItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  productId String   @db.ObjectId
+  quantity  Int      @default(1)
+  size      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@unique([userId, productId, size])
+}
+
+// ============ REVIEWS ============
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int
+  comment   String
+  productId String   @db.ObjectId
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
