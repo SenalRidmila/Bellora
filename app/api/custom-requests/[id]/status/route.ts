@@ -4,11 +4,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { status } = await req.json();
-    const requestId = params.id;
+    const { id: requestId } = await params;
 
     if (!status) {
       return NextResponse.json({ error: "Status is required" }, { status: 400 });
